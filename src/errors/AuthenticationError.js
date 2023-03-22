@@ -1,7 +1,7 @@
 class AuthenticationError extends Error {
     statusCode = 403
-    constructor(message = "") {
-        super(message || 'Authentication Error')
+    constructor(message = 'Authentication Error') {
+        super(message)
         this.name = this.constructor.name
     }
 }

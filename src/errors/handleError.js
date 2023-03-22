@@ -1,13 +1,14 @@
-const {errorResponse} = require('../utils/commonUtils')
+const multer = require('multer')
 const {UploadError} = require('./UploadError')
 const {NotFoundError} = require('./NotFoundError')
+const { debug } = require('../../config/serverConfig')
 const {ValidationError} = require('./ValidationError')
 const {AuthenticationError} = require('./AuthenticationError')
 const {AuthorizationError} = require('./AuthorizationError')
-const { debug } = require('../../config/serverConfig')
-const multer = require('multer')
+const {errorResponse, strEqualsCaseInSensitive} = require('../utils/commonUtils')
 
-const showStackTrace = err => debug ? {stackTrace: err.stack} : null 
+
+const showStackTrace = err => strEqualsCaseInSensitive(debug, 'true') ? {stackTrace: err.stack} : null
 
 exports.handleError = function handleError(app) {
 
@@ -24,45 +25,34 @@ exports.handleError = function handleError(app) {
         if (err) {
 
             if (err instanceof multer.MulterError || err instanceof UploadError) {
-                return res.status(422).send(errorResponse(
-                    422,
-                    [{'msg': err.message || 'There was error while uploading file'}, showStackTrace(err)]
-                ))
+                let fallbackErrorMessage = 'There was error while uploading file'
+                let uploadError = errorResponse([{msg: err.message || fallbackErrorMessage, ...showStackTrace(err)}], err.statusCode)
+                return res.status(err.statusCode).send(uploadError)
             }
 
             if (err instanceof ValidationError) {
-                return res.status(err.statusCode).send(errorResponse(
-                    err.statusCode,
-                    err.errors
-                ))
+                let validationError = errorResponse(err.errors, err.statusCode)
+                return res.status(err.statusCode).send(validationError)
             }
 
             if (err instanceof NotFoundError) {
-                return res.status(err.statusCode).send(errorResponse(
-                    err.statusCode,
-                    [{'msg': err.message || 'Not found'}, showStackTrace(err)]
-                ))
+                let notFoundError = errorResponse([{msg: err.message, ...showStackTrace(err)}], err.statusCode)
+                return res.status(err.statusCode).send(notFoundError)
             }
 
             if (err instanceof AuthenticationError) {
-                return res.status(err.statusCode).send(errorResponse(
-                    err.statusCode,
-                    [{msg: err.message || 'Credentials do not match'}, showStackTrace(err)]
-                ))
+                let authenticationError = errorResponse([{msg: err.message, ...showStackTrace(err)}], err.statusCode)
+                return res.status(err.statusCode).send(authenticationError)
             }
 
             if (err instanceof AuthorizationError) {
-                return res.status(err.statusCode).send(errorResponse(
-                    err.statusCode,
-                    [{msg: err.message || 'Access denied'}, showStackTrace(err)]
-                ))
+                let authorizationError = errorResponse([{msg: err.message, ...showStackTrace(err)}], err.statusCode)
+                return res.status(err.statusCode).send(authorizationError)
             }
         }
         
         // console.error(err.stack)
-
-        return res.status(500).send(errorResponse(
-            500, [{msg: 'Internal Server Error'},showStackTrace(err)]
-        ))
+        let internalError = errorResponse([{msg: 'Internal Server Error', ...showStackTrace(err)}], 500)
+        return res.status(500).send(internalError)
     })
 }

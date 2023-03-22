@@ -1,7 +1,7 @@
 class UploadError extends Error {
     statusCode = 422
-    constructor(message) {
-        super(message || 'Upload Error')
+    constructor(message = 'Upload Error') {
+        super(message)
         this.name = this.constructor.name
     }
 }
